@@ -53,9 +53,13 @@ export default {
       .map((keyword) => keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
       .join('|');
 
+    const twoYearsAgo = new Date();
+    twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+
     const searchCondition = {
       offeredLanguage: { $regex: offeredLanguageRegex, $options: 'i' },
       targetLanguage: { $regex: targetLanguageRegex, $options: 'i' },
+      updatedAt: { $gte: twoYearsAgo },
     };
 
     const partnerListLength = await ExchangePartner.countDocuments(searchCondition);

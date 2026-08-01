@@ -31,8 +31,12 @@ export default async (interaction) => {
   const clientTargetLanguageArray = clientData.targetLanguage.split(', ');
   const clientLevelArray = clientData.level.split(', ');
 
+  const twoYearsAgo = new Date();
+  twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+
   const studyBuddies = await StudyBuddy.find({
     id: { $ne: interaction.user.id },
+    updatedAt: { $gte: twoYearsAgo },
     $or: clientTargetLanguageArray.map((targetLanguage) => ({
       targetLanguage: { $regex: targetLanguage, $options: 'i' },
     })),
