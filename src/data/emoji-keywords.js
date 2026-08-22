@@ -497,11 +497,9 @@ export default {
   // Symbols & Effects
   '✨': ['sparkles', 'magic', 'shiny', 'glitter', 'special'],
   '🌟': ['glowing', 'star', 'bright', 'shine', 'special'],
-  '💫': ['dizzy', 'star', 'sparkle', 'magic', 'wonder'],
   '⚡': ['high', 'voltage', 'lightning', 'electric', 'power'],
   '☀️': ['sun', 'sunny', 'bright', 'day', 'weather'],
   '🌙': ['crescent', 'moon', 'night', 'sleep', 'lunar'],
-  '🌛': ['first', 'quarter', 'moon', 'face', 'night'],
   '🌜': ['last', 'quarter', 'moon', 'face', 'night'],
   '🌚': ['new', 'moon', 'face', 'dark', 'creepy'],
   '🌝': ['full', 'moon', 'face', 'bright', 'night'],
