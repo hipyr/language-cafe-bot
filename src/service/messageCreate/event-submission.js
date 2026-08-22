@@ -45,8 +45,9 @@ export default async function eventSubmission(message) {
     const existingSubmission = await EventSubmission.findOne({ eventId, messageId });
     if (existingSubmission) return;
 
-    // Fetch or create the participant record
+    // May be null on a user's first submission — totals are upserted below
     const participant = await EventParticipant.findOne({ eventId, userId });
+    const currentPoints = participant?.points ?? 0;
 
     // If no points configured, just count the submission with no points awarded
     if (!event.pointsPerSubmission) {
@@ -64,13 +65,13 @@ export default async function eventSubmission(message) {
     }
 
     // Check if the participant has already hit the max points cap
-    if (participant.points >= event.maxPoints) {
+    if (currentPoints >= event.maxPoints) {
       await message.react('🔒').catch(() => {});
       return;
     }
 
     // Calculate how many points to award (may be less than pointsPerSubmission at cap)
-    const remaining = event.maxPoints - participant.points;
+    const remaining = event.maxPoints - currentPoints;
     const pointsAwarded = Math.min(event.pointsPerSubmission, remaining);
 
     // Save the submission record
