@@ -12,6 +12,8 @@ export default {
   async execute(interaction) {
     channelLog(generateInteractionCreateLogContent(interaction));
 
+    await interaction.deferReply({ ephemeral: true });
+
     const allUsers = await StudyCheckIn.find({ point: { $gt: 0 } });
 
     const userList = allUsers.map((user) => ({
@@ -79,7 +81,7 @@ export default {
       content += '### Streak Information\n\nYou have no streak.';
     }
 
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [
         {
           color: COLORS.PRIMARY,
@@ -89,7 +91,6 @@ export default {
           },
         },
       ],
-      ephemeral: true,
     });
   },
 };

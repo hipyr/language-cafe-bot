@@ -95,8 +95,12 @@ export default async (interaction) => {
   const refinedTargetLanguage = targetLanguageArray.join(', ');
   const refinedOfferedLanguage = offeredLanguageArray.join(', ');
 
+  // Validations above are fast; defer before slow DB/API work so the
+  // 3-second interaction window is never exceeded.
+  await interaction.deferReply();
+
   await ExchangePartner.findOneAndUpdate(
-    { id: interaction.member.user.id },
+    { id: interaction.user.id },
     {
       targetLanguage: refinedTargetLanguage,
       offeredLanguage: refinedOfferedLanguage,
@@ -105,13 +109,13 @@ export default async (interaction) => {
     { upsert: true, new: true },
   );
 
-  await interaction.reply({
+  await interaction.editReply({
     embeds: [
       {
         color: COLORS.PRIMARY,
         title: 'Register Language Exchange Partner Listing',
         description: `${userMention(
-          interaction.member.user.id,
+          interaction.user.id,
         )} has registered their language exchange partner listing.`,
         fields: [
           {
@@ -128,8 +132,8 @@ export default async (interaction) => {
           },
         ],
         author: {
-          name: `${interaction.member.user.globalName}(${interaction.member.user.username}#${interaction.member.user.discriminator})`,
-          icon_url: interaction.member.user.avatarURL(),
+          name: `${interaction.user.globalName}(${interaction.user.username}#${interaction.user.discriminator})`,
+          icon_url: interaction.user.avatarURL(),
         },
       },
     ],

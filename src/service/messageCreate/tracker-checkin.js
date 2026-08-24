@@ -1,7 +1,7 @@
 import TrackerCheckin from '../../models/tracker-checkin.js';
 import TrackerParticipant from '../../models/tracker-participant.js';
 import Tracker from '../../models/tracker.js';
-import channelLog from '../utils/channel-log.js';
+import channelLog, { generateSystemLogContent } from '../utils/channel-log.js';
 import { updateLiveTracker } from '../utils/tracker-renderer.js';
 import {
   getStartOfDay,
@@ -226,9 +226,12 @@ export default async function trackerCheckin(message) {
 
       await message.react('✅');
       channelLog(
-        `Tracker check-in updated: ${userId} | ${threadId} | ${
-          checkDate.toISOString().split('T')[0]
-        } | ${type}`,
+        generateSystemLogContent('Tracker Check-in Updated', {
+          tracker: `<#${threadId}>`,
+          user: `<@${userId}>`,
+          date: `\`${checkDate.toISOString().split('T')[0]}\``,
+          type: `\`${type}\``,
+        }),
       );
     } else {
       // Create new check-in
@@ -244,9 +247,12 @@ export default async function trackerCheckin(message) {
 
       await message.react('✅');
       channelLog(
-        `Tracker check-in created: ${userId} | ${threadId} | ${
-          checkDate.toISOString().split('T')[0]
-        } | ${type}`,
+        generateSystemLogContent('Tracker Check-in Created', {
+          tracker: `<#${threadId}>`,
+          user: `<@${userId}>`,
+          date: `\`${checkDate.toISOString().split('T')[0]}\``,
+          type: `\`${type}\``,
+        }),
       );
     }
 

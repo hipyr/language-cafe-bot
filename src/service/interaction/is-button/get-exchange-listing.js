@@ -4,13 +4,15 @@ import { COLORS } from '../../../constants/index.js';
 import ExchangePartner from '../../../models/ExchangePartner.js';
 
 export default async (interaction) => {
+  await interaction.deferUpdate();
+
   const clientTargetLanguage = await ExchangePartner.findOne(
     { id: interaction.user.id },
     'targetLanguage offeredLanguage',
   );
 
   if (!clientTargetLanguage) {
-    await interaction.update({
+    await interaction.editReply({
       embeds: [
         {
           color: COLORS.PRIMARY,
@@ -21,7 +23,6 @@ export default async (interaction) => {
         },
       ],
       components: [],
-      ephemeral: true,
     });
     return;
   }
@@ -37,15 +38,19 @@ export default async (interaction) => {
     .map((keyword) => keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
     .join('|');
 
+  const twoYearsAgo = new Date();
+  twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+
   const searchCondition = {
     offeredLanguage: { $regex: offeredLanguageRegex, $options: 'i' },
     targetLanguage: { $regex: targetLanguageRegex, $options: 'i' },
+    updatedAt: { $gte: twoYearsAgo },
   };
 
   const partnerListLength = await ExchangePartner.countDocuments(searchCondition);
 
   if (partnerListLength === 0) {
-    await interaction.update({
+    await interaction.editReply({
       embeds: [
         {
           color: COLORS.PRIMARY,
@@ -56,7 +61,6 @@ export default async (interaction) => {
         },
       ],
       components: [],
-      ephemeral: true,
     });
 
     return;
@@ -84,7 +88,7 @@ export default async (interaction) => {
     .skip(offset);
 
   if (!partner) {
-    await interaction.update({
+    await interaction.editReply({
       embeds: [
         {
           color: COLORS.PRIMARY,
@@ -95,7 +99,6 @@ export default async (interaction) => {
         },
       ],
       components: [],
-      ephemeral: true,
     });
 
     return;
@@ -103,7 +106,7 @@ export default async (interaction) => {
 
   const partnerObject = await client.users.fetch(partner.id);
 
-  await interaction.update({
+  await interaction.editReply({
     embeds: [
       {
         color: COLORS.PRIMARY,
@@ -157,6 +160,5 @@ export default async (interaction) => {
           .setDisabled(page === partnerListLength),
       ),
     ],
-    ephemeral: true,
   });
 };

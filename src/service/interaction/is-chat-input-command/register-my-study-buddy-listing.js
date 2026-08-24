@@ -1,10 +1,9 @@
 import { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
 import StudyBuddy from '../../../models/study-buddy.js';
+import queryWithTimeout from '../../utils/query-with-timeout.js';
 
 export default async (interaction) => {
-  const studyBuddy = await StudyBuddy.findOne({
-    id: interaction.user.id,
-  });
+  const studyBuddy = await queryWithTimeout(StudyBuddy.findOne({ id: interaction.user.id }));
 
   const modal = new ModalBuilder()
     .setCustomId('register-my-study-buddy-listing')

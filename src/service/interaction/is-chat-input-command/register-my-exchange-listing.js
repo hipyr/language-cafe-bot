@@ -1,10 +1,11 @@
 import { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
 import ExchangePartner from '../../../models/ExchangePartner.js';
+import queryWithTimeout from '../../utils/query-with-timeout.js';
 
 export default async (interaction) => {
-  const exchangePartner = await ExchangePartner.findOne({
-    id: interaction.member.user.id,
-  });
+  const exchangePartner = await queryWithTimeout(
+    ExchangePartner.findOne({ id: interaction.user.id }),
+  );
 
   const modal = new ModalBuilder()
     .setCustomId('register-my-exchange-listing')

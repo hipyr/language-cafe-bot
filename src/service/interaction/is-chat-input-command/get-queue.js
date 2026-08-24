@@ -28,9 +28,11 @@ export const getCurrentQueueDescription = async () => {
 
 export default async (interaction) => {
   try {
+    await interaction.deferReply();
+
     const description = await getCurrentQueueDescription();
 
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [
         {
           color: COLORS.PRIMARY,

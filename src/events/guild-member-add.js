@@ -16,8 +16,10 @@ export default {
       .setStyle(ButtonStyle.Primary);
     const row = new ActionRowBuilder().addComponents(startButton);
 
-    const dm = await member.send({
-      content: `# Welcome to the Language Cafe Discord Server!
+    let dm;
+    try {
+      dm = await member.send({
+        content: `# Welcome to the Language Cafe Discord Server!
 
 I'd be happy to walk you through the server and set up a personalized guide to its most useful channels and features.
 
@@ -25,8 +27,14 @@ Press the button below to begin.
 If you'd rather explore on your own, you can ignore this message.
 
 *Note: To make sure the guide is visible, turn on "Show embeds and link previews" via \`Settings > Chat / Appearance > Show embeds and link previews\` to see the tutorial.*`,
-      components: [row],
-    });
+        components: [row],
+      });
+    } catch (error) {
+      // DMs disabled, or the member already left the server (no mutual guilds)
+      // eslint-disable-next-line no-console
+      console.error(`Could not send welcome DM to ${member.id}:`, error.message);
+      return;
+    }
 
     await NewMember.create({
       id: member.id,

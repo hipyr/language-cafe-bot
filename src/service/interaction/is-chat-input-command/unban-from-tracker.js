@@ -2,7 +2,7 @@ import { COLORS } from '../../../constants/index.js';
 import Tracker from '../../../models/tracker.js';
 import TrackerBan from '../../../models/tracker-ban.js';
 import { isForumThread } from '../../utils/tracker-utils.js';
-import channelLog from '../../utils/channel-log.js';
+import channelLog, { generateSystemLogContent } from '../../utils/channel-log.js';
 
 export default async function unbanFromTracker(interaction) {
   await interaction.deferReply();
@@ -72,7 +72,11 @@ export default async function unbanFromTracker(interaction) {
     });
 
     channelLog(
-      `User unbanned from tracker: ${targetUser.id} | ${threadId} | by ${interaction.user.id}`,
+      generateSystemLogContent('User Unbanned From Tracker', {
+        tracker: `<#${threadId}>`,
+        user: `<@${targetUser.id}>`,
+        'unbanned by': `<@${interaction.user.id}>`,
+      }),
     );
   } catch (error) {
     console.error('Error unbanning user from tracker:', error);

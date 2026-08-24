@@ -15,11 +15,13 @@ export default {
     try {
       channelLog(generateInteractionCreateLogContent(interaction));
 
+      await interaction.deferReply({ ephemeral: true });
+
       const categories = await Category.find().sort({ createdAt: 1 });
 
       const description = categories.map((category) => category.message).join('\n\n');
 
-      await interaction.reply({
+      await interaction.editReply({
         embeds: [
           {
             color: COLORS.PRIMARY,
@@ -27,7 +29,6 @@ export default {
             description: `\`\`\`\n${description}\n\`\`\``,
           },
         ],
-        ephemeral: true,
       });
     } catch (error) {
       // eslint-disable-next-line no-console

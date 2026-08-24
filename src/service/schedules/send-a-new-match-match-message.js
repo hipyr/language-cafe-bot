@@ -65,7 +65,8 @@ const sendANewMatchMatchMessage = async () => {
       return;
     }
 
-    const matchMatchTopics = await MatchMatchTopic.find().sort({ point: -1 }).limit(1);
+    // Same topic users submitted against (see participate-match-match.js)
+    const matchMatchTopics = await MatchMatchTopic.find().sort({ createdAt: 1 }).limit(1);
 
     if (matchMatchTopics.length === 0) {
       await channel.send({

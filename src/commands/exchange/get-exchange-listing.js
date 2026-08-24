@@ -21,13 +21,15 @@ export default {
   async execute(interaction) {
     channelLog(generateInteractionCreateLogContent(interaction));
 
+    await interaction.deferReply({ ephemeral: true });
+
     const clientTargetLanguage = await ExchangePartner.findOne(
       { id: interaction.user.id },
       'targetLanguage offeredLanguage',
     );
 
     if (!clientTargetLanguage) {
-      await interaction.reply({
+      await interaction.editReply({
         embeds: [
           {
             color: COLORS.PRIMARY,
@@ -37,7 +39,6 @@ export default {
             )}, you have not registered your language exchange partner listing yet.`,
           },
         ],
-        ephemeral: true,
       });
       return;
     }
@@ -53,15 +54,19 @@ export default {
       .map((keyword) => keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
       .join('|');
 
+    const twoYearsAgo = new Date();
+    twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+
     const searchCondition = {
       offeredLanguage: { $regex: offeredLanguageRegex, $options: 'i' },
       targetLanguage: { $regex: targetLanguageRegex, $options: 'i' },
+      updatedAt: { $gte: twoYearsAgo },
     };
 
     const partnerListLength = await ExchangePartner.countDocuments(searchCondition);
 
     if (partnerListLength === 0) {
-      await interaction.reply({
+      await interaction.editReply({
         embeds: [
           {
             color: COLORS.PRIMARY,
@@ -71,7 +76,6 @@ export default {
             )}, there are no exchange partner matches.`,
           },
         ],
-        ephemeral: true,
       });
 
       return;
@@ -81,7 +85,7 @@ export default {
 
     const partnerObject = await client.users.fetch(partner.id);
 
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [
         {
           color: COLORS.PRIMARY,
@@ -135,7 +139,6 @@ export default {
             .setDisabled(partnerListLength === 1),
         ),
       ],
-      ephemeral: true,
     });
   },
 };

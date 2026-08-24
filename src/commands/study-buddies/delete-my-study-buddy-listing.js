@@ -13,6 +13,8 @@ export default {
   async execute(interaction) {
     channelLog(generateInteractionCreateLogContent(interaction));
 
+    await interaction.deferReply({ ephemeral: true });
+
     await StudyBuddy.deleteOne({
       id: interaction.user.id,
     });
@@ -21,7 +23,7 @@ export default {
       interaction.user.id,
     )}, your study buddy listing was removed from our database.`;
 
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [
         {
           color: COLORS.PRIMARY,
@@ -29,7 +31,6 @@ export default {
           description: content,
         },
       ],
-      ephemeral: true,
     });
   },
 };

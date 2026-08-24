@@ -3,24 +3,25 @@ import A_TO_Z from '../../../data/a2z.js';
 import Category from '../../../models/category.js';
 import { formatBulkList, parseBulkLines } from '../../utils/parse-bulk-lines.js';
 
-const replyWithEmbed = (interaction, description) =>
-  interaction.reply({
+const editReplyWithEmbed = (interaction, description) =>
+  interaction.editReply({
     embeds: [
       {
         color: COLORS.PRIMARY,
         description,
       },
     ],
-    ephemeral: true,
   });
 
 export default async (interaction) => {
   try {
+    await interaction.deferReply({ ephemeral: true });
+
     const input = interaction.fields.getTextInputValue('message');
     const { entries, duplicateInInputCount } = parseBulkLines(input);
 
     if (entries.length === 0) {
-      await replyWithEmbed(
+      await editReplyWithEmbed(
         interaction,
         'No category was submitted, put at least one category per line.',
       );
@@ -36,7 +37,7 @@ export default async (interaction) => {
     const alreadyExistingCount = entries.length - newMessages.length;
 
     if (newMessages.length === 0) {
-      await replyWithEmbed(
+      await editReplyWithEmbed(
         interaction,
         `No category created, all ${entries.length} submitted category (categories) already exist.`,
       );
@@ -48,7 +49,7 @@ export default async (interaction) => {
     );
 
     if (!res || res.length === 0) {
-      await replyWithEmbed(interaction, 'Failed to create category (categories)');
+      await editReplyWithEmbed(interaction, 'Failed to create category (categories)');
       return;
     }
 
@@ -62,7 +63,7 @@ export default async (interaction) => {
 
     const skippedText = skippedNotes.length > 0 ? `\n\nSkipped ${skippedNotes.join(' and ')}.` : '';
 
-    await replyWithEmbed(
+    await editReplyWithEmbed(
       interaction,
       `${res.length} category (categories) created successfully\n\nMessages${formatBulkList(
         newMessages,
@@ -71,7 +72,7 @@ export default async (interaction) => {
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error(error);
-    await replyWithEmbed(
+    await editReplyWithEmbed(
       interaction,
       'Failed to create category (categories) (Internal Server Error)',
     );

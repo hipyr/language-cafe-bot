@@ -13,6 +13,8 @@ export default {
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   execute: async (interaction) => {
+    await interaction.deferReply({ ephemeral: true });
+
     const members = await NewMember.find();
     let content = '';
 
@@ -26,7 +28,7 @@ export default {
 
     contentWithCodeBlock = checkMaxContentLength({ length: 4096, content: contentWithCodeBlock });
 
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [
         {
           color: COLORS.PRIMARY,
@@ -37,7 +39,6 @@ export default {
           },
         },
       ],
-      ephemeral: true,
     });
 
     await NewMember.deleteMany({});

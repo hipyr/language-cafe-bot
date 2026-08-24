@@ -15,13 +15,15 @@ export default {
     try {
       channelLog(generateInteractionCreateLogContent(interaction));
 
+      await interaction.deferReply({ ephemeral: true });
+
       const matchMatchTopics = await MatchMatchTopic.find().sort({ createdAt: 1 });
 
       const description = matchMatchTopics
         .map((matchMatchTopic) => matchMatchTopic.topic)
         .join('\n\n');
 
-      await interaction.reply({
+      await interaction.editReply({
         embeds: [
           {
             color: COLORS.PRIMARY,
@@ -29,7 +31,6 @@ export default {
             description: `\`\`\`\n${description}\n\`\`\``,
           },
         ],
-        ephemeral: true,
       });
     } catch (error) {
       // eslint-disable-next-line no-console

@@ -1,12 +1,12 @@
-import { Collection, userMention } from 'discord.js';
+import { Collection, Events, userMention } from 'discord.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import client from './client/index.js';
 import config from './config/index.js';
 import mongoDBConnect from './lib/mongo-db.js';
-import schedules from './schedules/index.js';
 import PomodoroGroup from './models/pomodoro-group.js';
+import schedules from './schedules/index.js';
 import { putPomodoroScheduleJob } from './service/interaction/is-chat-input-command/create-pomodoro-group.js';
 import { channelLogWithoutEmbeds } from './service/utils/channel-log.js';
 
@@ -14,6 +14,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 client.cooldowns = new Collection();
 client.commands = new Collection();
+
+// Awaited before login, or an interaction can arrive before commands are registered.
+const loadPromises = [];
 
 const foldersPath = path.join(__dirname, 'commands');
 const commandFolders = fs.readdirSync(foldersPath);
@@ -26,18 +29,25 @@ for (const folder of commandFolders) {
   for (const file of commandFiles) {
     const filePath = path.join(commandsPath, file);
 
-    (async () => {
-      const command = (await import(filePath)).default;
+    loadPromises.push(
+      (async () => {
+        try {
+          const command = (await import(filePath)).default;
 
-      if ('data' in command && 'execute' in command) {
-        client.commands.set(command.data.name, command);
-      } else {
-        // eslint-disable-next-line no-console
-        console.info(
-          `[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`,
-        );
-      }
-    })();
+          if ('data' in command && 'execute' in command) {
+            client.commands.set(command.data.name, command);
+          } else {
+            // eslint-disable-next-line no-console
+            console.info(
+              `[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`,
+            );
+          }
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.error(`Failed to load command at ${filePath}:`, error);
+        }
+      })(),
+    );
   }
 }
 
@@ -48,20 +58,49 @@ const eventFiles = fs.readdirSync(eventsPath).filter((file) => file.endsWith('.j
 for (const file of eventFiles) {
   const filePath = path.join(eventsPath, file);
 
-  (async () => {
-    const event = (await import(filePath)).default;
+  loadPromises.push(
+    (async () => {
+      try {
+        const event = (await import(filePath)).default;
 
-    if (event.once) {
-      client.once(event.name, (...args) => event.execute(...args));
-    } else {
-      client.on(event.name, (...args) => event.execute(...args));
-    }
-  })();
+        const runEvent = async (...args) => {
+          try {
+            await event.execute(...args);
+          } catch (error) {
+            // eslint-disable-next-line no-console
+            console.error(`Error in ${event.name} event handler:`, error);
+          }
+        };
+
+        if (event.once) {
+          client.once(event.name, runEvent);
+        } else {
+          client.on(event.name, runEvent);
+        }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error(`Failed to load event at ${filePath}:`, error);
+      }
+    })(),
+  );
 }
+
+await Promise.all(loadPromises);
+
+client.on('error', (error) => {
+  // eslint-disable-next-line no-console
+  console.error('Discord client error:', error);
+});
+
+process.on('unhandledRejection', (error) => {
+  // eslint-disable-next-line no-console
+  console.error('Unhandled promise rejection:', error);
+});
+
+await mongoDBConnect();
 
 await client.login(config.DISCORD_TOKEN);
 
-await mongoDBConnect();
 schedules();
 
 // put pomodoro schedule job
@@ -80,5 +119,13 @@ if (pomodoroGroupRes.length > 0) {
 }
 
 if (process.env.NODE_ENV === 'production') {
-  channelLogWithoutEmbeds(`${userMention(config.ADMIN_USER_ID)}, bot is started!`);
+  // login() resolves on READY, while the log guild is still an unavailable stub with no channels.
+  const sendStartupPing = () =>
+    channelLogWithoutEmbeds(`${userMention(config.ADMIN_USER_ID)}, bot is started!`);
+
+  if (client.isReady()) {
+    sendStartupPing();
+  } else {
+    client.once(Events.ClientReady, sendStartupPing);
+  }
 }

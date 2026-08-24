@@ -1,6 +1,6 @@
 import { COLORS } from '../../../constants/index.js';
 import Tracker from '../../../models/tracker.js';
-import channelLog from '../../utils/channel-log.js';
+import channelLog, { generateSystemLogContent } from '../../utils/channel-log.js';
 import { isForumThread } from '../../utils/tracker-utils.js';
 
 export default async function createTracker(interaction) {
@@ -187,7 +187,13 @@ export default async function createTracker(interaction) {
     await tracker.save();
 
     channelLog(
-      `Tracker created: ${threadId} | ${displayName} | ${frequency} | ${startDateStr} to ${endDateStr}`,
+      generateSystemLogContent('Tracker Created', {
+        tracker: `<#${threadId}>`,
+        name: displayName,
+        'created by': `<@${interaction.user.id}>`,
+        frequency: `\`${frequency}\``,
+        period: `\`${startDateStr}\` to \`${endDateStr}\``,
+      }),
     );
   } catch (error) {
     console.error('Error creating tracker:', error);
