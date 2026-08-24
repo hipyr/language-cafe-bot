@@ -23,13 +23,11 @@ export const parseBulkLines = (raw) => {
   return { entries, duplicateInInputCount };
 };
 
-
 export const formatBulkList = (entries) => {
   const lines = entries.map((entry, index) => `${index + 1}. ${entry}`);
 
   let content = '';
   let shownCount = 0;
-
 
   for (const line of lines) {
     if (content.length + line.length + 1 > MAX_CODE_BLOCK_LENGTH) break;
