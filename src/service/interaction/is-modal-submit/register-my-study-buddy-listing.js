@@ -1,6 +1,7 @@
 import { userMention } from 'discord.js';
 import config from '../../../config/index.js';
 import { COLORS } from '../../../constants/index.js';
+import deleteListingMessage from '../../utils/delete-listing-message.js';
 import languages from '../../../data/languages.js';
 import StudyBuddy from '../../../models/study-buddy.js';
 
@@ -109,17 +110,17 @@ export default async (interaction) => {
   // 3-second interaction window is never exceeded.
   await interaction.deferReply();
 
-  await StudyBuddy.findOneAndUpdate(
+  const previousListing = await StudyBuddy.findOneAndUpdate(
     { id: interaction.user.id },
     {
       targetLanguage: refinedTargetLanguage,
       level: refinedLevel,
       introduction,
     },
-    { upsert: true, new: true },
+    { upsert: true, new: false },
   );
 
-  await interaction.editReply({
+  const listingMessage = await interaction.editReply({
     embeds: [
       {
         color: COLORS.PRIMARY,
@@ -146,6 +147,13 @@ export default async (interaction) => {
       },
     ],
   });
+
+  await StudyBuddy.updateOne(
+    { id: interaction.user.id },
+    { listingChannelId: listingMessage.channelId, listingMessageId: listingMessage.id },
+  ).catch(console.error);
+
+  await deleteListingMessage(interaction.client, previousListing);
 
   await interaction.followUp({
     embeds: [

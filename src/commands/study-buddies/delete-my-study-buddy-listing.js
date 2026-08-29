@@ -4,6 +4,7 @@ import StudyBuddy from '../../models/study-buddy.js';
 import channelLog, {
   generateInteractionCreateLogContent,
 } from '../../service/utils/channel-log.js';
+import deleteListingMessage from '../../service/utils/delete-listing-message.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -15,9 +16,8 @@ export default {
 
     await interaction.deferReply({ ephemeral: true });
 
-    await StudyBuddy.deleteOne({
-      id: interaction.user.id,
-    });
+    const listing = await StudyBuddy.findOneAndDelete({ id: interaction.user.id });
+    await deleteListingMessage(interaction.client, listing);
 
     const content = `${userMention(
       interaction.user.id,

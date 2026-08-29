@@ -1,6 +1,7 @@
 import { userMention } from 'discord.js';
 import config from '../../../config/index.js';
 import { COLORS } from '../../../constants/index.js';
+import deleteListingMessage from '../../utils/delete-listing-message.js';
 import languages from '../../../data/languages.js';
 import ExchangePartner from '../../../models/ExchangePartner.js';
 
@@ -99,17 +100,17 @@ export default async (interaction) => {
   // 3-second interaction window is never exceeded.
   await interaction.deferReply();
 
-  await ExchangePartner.findOneAndUpdate(
+  const previousListing = await ExchangePartner.findOneAndUpdate(
     { id: interaction.user.id },
     {
       targetLanguage: refinedTargetLanguage,
       offeredLanguage: refinedOfferedLanguage,
       introduction,
     },
-    { upsert: true, new: true },
+    { upsert: true, new: false },
   );
 
-  await interaction.editReply({
+  const listingMessage = await interaction.editReply({
     embeds: [
       {
         color: COLORS.PRIMARY,
@@ -138,6 +139,13 @@ export default async (interaction) => {
       },
     ],
   });
+
+  await ExchangePartner.updateOne(
+    { id: interaction.user.id },
+    { listingChannelId: listingMessage.channelId, listingMessageId: listingMessage.id },
+  ).catch(console.error);
+
+  await deleteListingMessage(interaction.client, previousListing);
 
   await interaction.followUp({
     embeds: [

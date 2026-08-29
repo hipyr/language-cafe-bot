@@ -21,6 +21,12 @@ const exchangePartner = new Schema(
       type: String,
       required: true,
     },
+    listingChannelId: {
+      type: String,
+    },
+    listingMessageId: {
+      type: String,
+    },
   },
   {
     timestamps: true,
