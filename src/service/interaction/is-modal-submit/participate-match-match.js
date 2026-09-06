@@ -1,13 +1,14 @@
 import config from '../../../config/index.js';
 import { COLORS } from '../../../constants/index.js';
 import MatchMatchMessage from '../../../models/match-match-message.js';
-import MatchMatchTopic from '../../../models/match-match-topic.js';
+import { isSubmissionForTopic } from '../../utils/match-match-text.js';
+import getCurrentMatchMatchTopic from '../../utils/match-match-topic.js';
 
 const { CLIENT_ID: clientId, MATCH_MATCH_COMMAND_ID: matchMatchCommandId } = config;
 
 export default async (interaction) => {
   try {
-    const currentMatchMatchTopic = await MatchMatchTopic.findOne().sort({ createdAt: 1 });
+    const currentMatchMatchTopic = await getCurrentMatchMatchTopic();
 
     if (!currentMatchMatchTopic) {
       await interaction.reply({
@@ -28,9 +29,7 @@ export default async (interaction) => {
     );
     const submission = interaction.fields.getTextInputValue('submission');
 
-    const isCompound = submission
-      .toUpperCase()
-      .includes(currentMatchMatchTopic.topic.toUpperCase());
+    const isCompound = isSubmissionForTopic(submission, currentMatchMatchTopic.topic);
 
     if (!isCompound) {
       await interaction.reply({

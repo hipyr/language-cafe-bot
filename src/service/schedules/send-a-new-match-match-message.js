@@ -5,16 +5,16 @@ import { COLORS } from '../../constants/index.js';
 import MatchMatchMessage from '../../models/match-match-message.js';
 import MatchMatchTopic from '../../models/match-match-topic.js';
 import Point from '../../models/point.js';
+import { normalizeMatchMatchText } from '../utils/match-match-text.js';
+import getCurrentMatchMatchTopic from '../utils/match-match-topic.js';
 
 const { MATCH_MATCH_CHANNEL_ID: matchMatchChannelId, MATCH_MATCH_COMMAND_ID: matchMatchCommandId } =
   config;
 
-const normalize = (str) => str.toUpperCase().replace(/[ -]/g, '');
-
 const processMatchedSubmissions = (submissionsArr, matchMatchMessages) =>
   submissionsArr.map((submission) => {
     const matchedMessages = matchMatchMessages.filter(
-      (msg) => normalize(msg.submission) === submission,
+      (msg) => normalizeMatchMatchText(msg.submission) === submission,
     );
     return { submission, items: matchedMessages };
   });
@@ -48,9 +48,57 @@ const createDescriptionSection = (matchedArr, points, title, emoji) => {
     .join('\n\n')}\n`;
 };
 
+const noTopicsDescription =
+  "There's no match-match topic left.\nPlease ping the moderator to create a new topic.";
+
+const sendCurrentTopicStickyMessage = async (channel) => {
+  const stickyMessageTitle = 'Match-match';
+  const currentMessages = await channel.messages.fetch(20);
+  const stickyMessages = currentMessages.filter(
+    (msg) => msg?.author?.id === config.CLIENT_ID && msg?.embeds[0]?.title === stickyMessageTitle,
+  );
+
+  await Promise.all(stickyMessages.map((msg) => msg.delete().catch(() => {})));
+
+  const currentMatchMatchTopic = await getCurrentMatchMatchTopic();
+  const numberOfSubmissions = await MatchMatchMessage.countDocuments();
+
+  const description = currentMatchMatchTopic
+    ? `Topic\n\`\`\`\n${
+        currentMatchMatchTopic.topic
+      }\n\`\`\`\nNumber of participants: \`${numberOfSubmissions}\`\n\n**Submission period ends **<t:${Math.floor(
+        (() => {
+          const now = new Date();
+          now.setHours(0, 0, 0, 0);
+          if (now.getTime() <= Date.now()) now.setDate(now.getDate() + 1);
+          return now;
+        })().getTime() / 1000,
+      )}:R>\n\nClick </match-match:${matchMatchCommandId}> here and send it to participate\n\nHow to Play: https://discord.com/channels/739911855795077282/1244836542036443217/1244923513199005758\nPoint Leaderboard: </word-games-point-leaderboard:${
+        config.POINTS_LEADERBOARD_COMMAND_ID
+      }>`
+    : noTopicsDescription;
+
+  await channel.send({
+    embeds: [
+      {
+        color: COLORS.PRIMARY,
+        title: stickyMessageTitle,
+        description,
+      },
+    ],
+  });
+};
+
 const sendANewMatchMatchMessage = async () => {
   try {
     const channel = await client.channels.fetch(matchMatchChannelId);
+    const matchMatchTopic = await getCurrentMatchMatchTopic();
+
+    if (!matchMatchTopic) {
+      await sendCurrentTopicStickyMessage(channel);
+      return;
+    }
+
     const matchMatchMessages = await MatchMatchMessage.find();
 
     if (matchMatchMessages.length === 0) {
@@ -58,34 +106,23 @@ const sendANewMatchMatchMessage = async () => {
         embeds: [
           {
             color: COLORS.PRIMARY,
-            description: 'There are no users participating in the current match-match topic.',
+            description: `There are no users participating in the current match-match topic: ${matchMatchTopic.topic}.`,
           },
         ],
       });
+
+      if (process.env.NODE_ENV === 'production') {
+        await MatchMatchTopic.deleteOne({ _id: matchMatchTopic._id });
+      }
+
+      await sendCurrentTopicStickyMessage(channel);
       return;
     }
-
-    const matchMatchTopics = await MatchMatchTopic.find().sort({ point: -1 }).limit(1);
-
-    if (matchMatchTopics.length === 0) {
-      await channel.send({
-        embeds: [
-          {
-            color: COLORS.PRIMARY,
-            description:
-              "There's no match-match topic left.\nPlease ping the moderator to create a new topic.",
-          },
-        ],
-      });
-      return;
-    }
-
-    const matchMatchTopic = matchMatchTopics[0];
 
     const submissionWithCountObj = {};
 
     matchMatchMessages.forEach((matchMatchMessage) => {
-      const normalizedSubmission = normalize(matchMatchMessage.submission);
+      const normalizedSubmission = normalizeMatchMatchText(matchMatchMessage.submission);
       submissionWithCountObj[normalizedSubmission] =
         submissionWithCountObj[normalizedSubmission] + 1 || 1;
     });
@@ -127,7 +164,7 @@ const sendANewMatchMatchMessage = async () => {
     );
 
     const notMachedParticipants = matchMatchMessages.filter((msg) => {
-      const normalized = normalize(msg.submission);
+      const normalized = normalizeMatchMatchText(msg.submission);
       return (
         !matchedTwoSubmissionArr.includes(normalized) &&
         !matchedThreeSubmissionArr.includes(normalized) &&
@@ -198,37 +235,7 @@ const sendANewMatchMatchMessage = async () => {
       await MatchMatchTopic.deleteOne({ _id: matchMatchTopic._id });
     }
 
-    const stickyMessageTitle = 'Match-match';
-    const currentMessages = await channel.messages.fetch(20);
-    const stickyMessages = currentMessages.filter(
-      (msg) => msg?.author?.id === config.CLIENT_ID && msg?.embeds[0]?.title === stickyMessageTitle,
-    );
-
-    await Promise.all(stickyMessages.map((msg) => msg.delete().catch(() => {})));
-
-    const currentMatchMatchTopic = await MatchMatchTopic.findOne().sort({ createdAt: 1 });
-    const numberOfSubmissions = await MatchMatchMessage.countDocuments();
-
-    await channel.send({
-      embeds: [
-        {
-          color: COLORS.PRIMARY,
-          title: stickyMessageTitle,
-          description: `Topic\n\`\`\`\n${
-            currentMatchMatchTopic.topic
-          }\n\`\`\`\nNumber of participants: \`${numberOfSubmissions}\`\n\n**Submission period ends **<t:${Math.floor(
-            (() => {
-              const now = new Date();
-              now.setHours(0, 0, 0, 0);
-              if (now.getTime() <= Date.now()) now.setDate(now.getDate() + 1);
-              return now;
-            })().getTime() / 1000,
-          )}:R>\n\nClick </match-match:${matchMatchCommandId}> here and send it to participate\n\nHow to Play: https://discord.com/channels/739911855795077282/1244836542036443217/1244923513199005758\nPoint Leaderboard: </word-games-point-leaderboard:${
-            config.POINTS_LEADERBOARD_COMMAND_ID
-          }>`,
-        },
-      ],
-    });
+    await sendCurrentTopicStickyMessage(channel);
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error(error);
