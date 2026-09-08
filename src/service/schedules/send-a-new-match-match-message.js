@@ -11,12 +11,19 @@ import getCurrentMatchMatchTopic from '../utils/match-match-topic.js';
 const { MATCH_MATCH_CHANNEL_ID: matchMatchChannelId, MATCH_MATCH_COMMAND_ID: matchMatchCommandId } =
   config;
 
+// `submission` is the normalized grouping key; `label` is a real spelling from
+// one of the submissions, so the results embed reads "waterfall" rather than the
+// stripped, upper-cased "WATERFALL".
 const processMatchedSubmissions = (submissionsArr, matchMatchMessages) =>
   submissionsArr.map((submission) => {
     const matchedMessages = matchMatchMessages.filter(
       (msg) => normalizeMatchMatchText(msg.submission) === submission,
     );
-    return { submission, items: matchedMessages };
+    return {
+      submission,
+      label: matchedMessages[0]?.submission ?? submission,
+      items: matchedMessages,
+    };
   });
 
 const createBulkWriteOperations = (matchedArr, points) =>
@@ -38,7 +45,7 @@ const createDescriptionSection = (matchedArr, points, title, emoji) => {
   return `\n### ${title} ${emoji} (${points} points)\n${matchedArr
     .map(
       (e) =>
-        `**${e.submission}**\n${e.items
+        `**${e.label}**\n${e.items
           .map(
             (item) =>
               `${userMention(item.id)} ${item.submission} (${item.submissionInTargetLanguage})`,
@@ -61,7 +68,9 @@ const sendCurrentTopicStickyMessage = async (channel) => {
   await Promise.all(stickyMessages.map((msg) => msg.delete().catch(() => {})));
 
   const currentMatchMatchTopic = await getCurrentMatchMatchTopic();
-  const numberOfSubmissions = await MatchMatchMessage.countDocuments();
+  const numberOfSubmissions = currentMatchMatchTopic
+    ? await MatchMatchMessage.countDocuments({ topicId: currentMatchMatchTopic._id })
+    : 0;
 
   const description = currentMatchMatchTopic
     ? `Topic\n\`\`\`\n${
@@ -87,19 +96,28 @@ const sendCurrentTopicStickyMessage = async (channel) => {
       },
     ],
   });
+
+  return currentMatchMatchTopic;
 };
 
-const sendANewMatchMatchMessage = async () => {
+// `consume` decides whether the round is actually finished: submissions cleared
+// and the topic retired. Defaults to the daily cron's production-only behavior;
+// tests override it to exercise a full round without touching NODE_ENV.
+const sendANewMatchMatchMessage = async ({
+  consume = process.env.NODE_ENV === 'production',
+} = {}) => {
   try {
     const channel = await client.channels.fetch(matchMatchChannelId);
     const matchMatchTopic = await getCurrentMatchMatchTopic();
 
     if (!matchMatchTopic) {
       await sendCurrentTopicStickyMessage(channel);
-      return;
+      return { ok: true, outcome: 'no-topic' };
     }
 
-    const matchMatchMessages = await MatchMatchMessage.find();
+    // Only this round's submissions. Anything stamped with another topic belongs
+    // to a different round and must not be scored here.
+    const matchMatchMessages = await MatchMatchMessage.find({ topicId: matchMatchTopic._id });
 
     if (matchMatchMessages.length === 0) {
       await channel.send({
@@ -111,12 +129,19 @@ const sendANewMatchMatchMessage = async () => {
         ],
       });
 
-      if (process.env.NODE_ENV === 'production') {
+      if (consume) {
         await MatchMatchTopic.deleteOne({ _id: matchMatchTopic._id });
       }
 
-      await sendCurrentTopicStickyMessage(channel);
-      return;
+      const nextTopic = await sendCurrentTopicStickyMessage(channel);
+      return {
+        ok: true,
+        outcome: 'no-participants',
+        topic: matchMatchTopic.topic,
+        participants: 0,
+        consumed: consume,
+        nextTopic: nextTopic?.topic ?? null,
+      };
     }
 
     const submissionWithCountObj = {};
@@ -187,7 +212,34 @@ const sendANewMatchMatchMessage = async () => {
       })),
     ];
 
-    Point.bulkWrite(bulkWriteArr);
+    // Points must land before anything destructive happens. `ordered: false` so a
+    // single bad operation cannot skip every award after it in the batch.
+    let pointsWritten = false;
+    try {
+      const bulkWriteRes = await Point.bulkWrite(bulkWriteArr, { ordered: false });
+      const writeErrors = bulkWriteRes?.getWriteErrors?.() ?? bulkWriteRes?.writeErrors ?? [];
+      if (writeErrors.length > 0) {
+        // eslint-disable-next-line no-console
+        console.error('match-match point write reported errors:', writeErrors);
+      } else {
+        pointsWritten = true;
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('match-match point write failed:', error);
+    }
+
+    if (!pointsWritten) {
+      await channel.send({
+        embeds: [
+          {
+            color: COLORS.PRIMARY,
+            description: `Could not award points for the topic \`${matchMatchTopic.topic}\`, so the round was left open.\nPlease ping the moderator — submissions are kept and the round can be run again.`,
+          },
+        ],
+      });
+      return { ok: false, outcome: 'point-write-failed', topic: matchMatchTopic.topic };
+    }
 
     const description = `# Topic: ${matchMatchTopic.topic}
     ${createDescriptionSection(
@@ -230,15 +282,29 @@ const sendANewMatchMatchMessage = async () => {
       ],
     });
 
-    if (process.env.NODE_ENV === 'production') {
-      await MatchMatchMessage.deleteMany();
+    if (consume) {
+      // Scoped to this round; the second clause sweeps rows written before
+      // submissions carried a topic, which could otherwise never be cleared.
+      await MatchMatchMessage.deleteMany({
+        $or: [{ topicId: matchMatchTopic._id }, { topicId: { $exists: false } }],
+      });
       await MatchMatchTopic.deleteOne({ _id: matchMatchTopic._id });
     }
 
-    await sendCurrentTopicStickyMessage(channel);
+    const nextTopic = await sendCurrentTopicStickyMessage(channel);
+
+    return {
+      ok: true,
+      outcome: 'scored',
+      topic: matchMatchTopic.topic,
+      participants: matchMatchMessages.length,
+      consumed: consume,
+      nextTopic: nextTopic?.topic ?? null,
+    };
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error(error);
+    return { ok: false, error };
   }
 };
 
