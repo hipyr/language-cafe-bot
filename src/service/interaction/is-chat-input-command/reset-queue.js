@@ -3,9 +3,11 @@ import Queue from '../../../models/queue.js';
 
 export default async (interaction) => {
   try {
+    await interaction.deferReply();
+
     await Queue.deleteMany({});
 
-    interaction.reply({
+    await interaction.editReply({
       embeds: [
         {
           color: COLORS.PRIMARY,

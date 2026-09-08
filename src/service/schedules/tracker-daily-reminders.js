@@ -1,6 +1,6 @@
 import Tracker from '../../models/tracker.js';
-import client from '../../client/index.js';
-import channelLog from '../utils/channel-log.js';
+import channelLog, { generateSystemLogContent } from '../utils/channel-log.js';
+import { fetchTrackerChannel } from '../utils/tracker-utils.js';
 
 /**
  * Daily reminders for trackers:
@@ -23,7 +23,7 @@ export default async function trackerDailyReminders() {
 
 async function sendTrackerReminder(tracker) {
   try {
-    const channel = await client.channels.fetch(tracker.threadId);
+    const channel = await fetchTrackerChannel(tracker);
     if (!channel) {
       return;
     }
@@ -53,7 +53,13 @@ async function sendTrackerReminder(tracker) {
       await channel.send(
         `📅 Day ${dayNumber} - Don't forget to check in today! Use \`!checkin done <activity>\``,
       );
-      channelLog(`Daily reminder sent for tracker: ${tracker.threadId} | Day ${dayNumber}`);
+      channelLog(
+        generateSystemLogContent('Tracker Daily Reminder Sent', {
+          tracker: `<#${tracker.threadId}>`,
+          name: tracker.displayName,
+          day: `\`${dayNumber}\``,
+        }),
+      );
     } else if (tracker.frequency === 'weekly') {
       // Weekly tracker: Send reminder at the start of each week (every 7 days)
       // Week starts on day 1, 8, 15, 22, etc.
@@ -62,7 +68,13 @@ async function sendTrackerReminder(tracker) {
         await channel.send(
           `📅 Week ${weekNumber} - Don't forget to check in this week! Use \`!checkin done <activity>\``,
         );
-        channelLog(`Weekly reminder sent for tracker: ${tracker.threadId} | Week ${weekNumber}`);
+        channelLog(
+          generateSystemLogContent('Tracker Weekly Reminder Sent', {
+            tracker: `<#${tracker.threadId}>`,
+            name: tracker.displayName,
+            week: `\`${weekNumber}\``,
+          }),
+        );
       }
     }
   } catch (error) {

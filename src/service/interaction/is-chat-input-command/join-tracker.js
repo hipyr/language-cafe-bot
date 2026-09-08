@@ -4,7 +4,7 @@ import TrackerParticipant from '../../../models/tracker-participant.js';
 import TrackerBan from '../../../models/tracker-ban.js';
 import { isForumThread } from '../../utils/tracker-utils.js';
 import { updateLiveTracker } from '../../utils/tracker-renderer.js';
-import channelLog from '../../utils/channel-log.js';
+import channelLog, { generateSystemLogContent } from '../../utils/channel-log.js';
 import EMOJI_KEYWORDS from '../../../data/emoji-keywords.js';
 
 export default async function joinTracker(interaction) {
@@ -143,7 +143,13 @@ export default async function joinTracker(interaction) {
       ],
     });
 
-    channelLog(`User joined tracker: ${userId} | ${threadId} | ${selectedEmoji}`);
+    channelLog(
+      generateSystemLogContent('User Joined Tracker', {
+        tracker: `<#${threadId}>`,
+        user: `<@${userId}>`,
+        emoji: selectedEmoji,
+      }),
+    );
 
     // Update live tracker
     await updateLiveTracker(threadId, interaction.channel);

@@ -1,10 +1,11 @@
 import { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
 import MatchMatchMessage from '../../../models/match-match-message.js';
+import queryWithTimeout from '../../utils/query-with-timeout.js';
 
 export default async (interaction) => {
-  const matchMatchMessage = await MatchMatchMessage.findOne({
-    id: interaction.user.id,
-  });
+  const matchMatchMessage = await queryWithTimeout(
+    MatchMatchMessage.findOne({ id: interaction.user.id }),
+  );
 
   const modal = new ModalBuilder()
     .setCustomId('participate-match-match')

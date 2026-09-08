@@ -1,3 +1,7 @@
+import client from '../../client/index.js';
+import Tracker from '../../models/tracker.js';
+import channelLog, { generateSystemLogContent } from './channel-log.js';
+
 // Cell state emojis
 export const CELL_EMOJIS = {
   MISSING: '⬜',
@@ -55,6 +59,37 @@ export function isDateInTrackerPeriod(date, startDate, endDate) {
   const start = getStartOfDay(startDate);
   const end = getStartOfDay(endDate);
   return checkDate >= start && checkDate <= end;
+}
+
+/**
+ * Fetch a tracker's channel. If the channel no longer exists on Discord
+ * (Unknown Channel), deactivate the tracker so schedules stop retrying it.
+ */
+export async function fetchTrackerChannel(tracker) {
+  try {
+    return await client.channels.fetch(tracker.threadId);
+  } catch (error) {
+    if (error.code === 10003) {
+      // Matching on isActive makes every call after the first a no-op, so we log once per tracker.
+      const { modifiedCount } = await Tracker.updateOne(
+        { threadId: tracker.threadId, isActive: true },
+        { isActive: false },
+      );
+
+      if (modifiedCount > 0) {
+        channelLog(
+          generateSystemLogContent('Tracker Deactivated', {
+            tracker: `<#${tracker.threadId}>`,
+            name: tracker.displayName || 'unnamed',
+            reason: 'channel no longer exists',
+          }),
+        );
+      }
+
+      return null;
+    }
+    throw error;
+  }
 }
 
 /**

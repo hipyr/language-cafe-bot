@@ -4,6 +4,8 @@ import { COLORS } from '../../../constants/index.js';
 import StudyBuddy from '../../../models/study-buddy.js';
 
 export default async (interaction) => {
+  await interaction.deferUpdate();
+
   const clientData = await StudyBuddy.findOne(
     {
       id: interaction.user.id,
@@ -12,7 +14,7 @@ export default async (interaction) => {
   );
 
   if (!clientData) {
-    await interaction.update({
+    await interaction.editReply({
       embeds: [
         {
           color: COLORS.PRIMARY,
@@ -23,7 +25,6 @@ export default async (interaction) => {
         },
       ],
       components: [],
-      ephemeral: true,
     });
     return;
   }
@@ -61,7 +62,7 @@ export default async (interaction) => {
   const studyBuddyListLength = filteredStudyBuddies.length;
 
   if (studyBuddyListLength === 0) {
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [
         {
           color: COLORS.PRIMARY,
@@ -69,7 +70,6 @@ export default async (interaction) => {
           description: `${userMention(interaction.user.id)}, there are no study buddy matches.`,
         },
       ],
-      ephemeral: true,
     });
 
     return;
@@ -95,7 +95,7 @@ export default async (interaction) => {
   const studyBuddy = filteredStudyBuddies[offset];
 
   if (!studyBuddy) {
-    await interaction.update({
+    await interaction.editReply({
       embeds: [
         {
           color: COLORS.PRIMARY,
@@ -104,7 +104,6 @@ export default async (interaction) => {
         },
       ],
       components: [],
-      ephemeral: true,
     });
 
     return;
@@ -115,7 +114,7 @@ export default async (interaction) => {
   const targetLanguageArray = studyBuddy.targetLanguage.split(', ');
   const levelArray = studyBuddy.level.split(', ');
 
-  await interaction.update({
+  await interaction.editReply({
     embeds: [
       {
         color: COLORS.PRIMARY,
@@ -167,6 +166,5 @@ export default async (interaction) => {
           .setDisabled(page === studyBuddyListLength),
       ),
     ],
-    ephemeral: true,
   });
 };

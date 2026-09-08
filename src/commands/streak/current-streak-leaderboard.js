@@ -12,6 +12,8 @@ export default {
   async execute(interaction) {
     channelLog(generateInteractionCreateLogContent(interaction));
 
+    await interaction.deferReply({ ephemeral: true });
+
     const allUsers = await StudyCheckIn.find({ point: { $gt: 0 } });
 
     const userList = allUsers.map((user) => ({
@@ -80,9 +82,8 @@ export default {
       description: content,
     };
 
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [embed],
-      ephemeral: true,
     });
   },
 };

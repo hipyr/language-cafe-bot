@@ -4,6 +4,7 @@ import ExchangePartner from '../../models/ExchangePartner.js';
 import channelLog, {
   generateInteractionCreateLogContent,
 } from '../../service/utils/channel-log.js';
+import deleteListingMessage from '../../service/utils/delete-listing-message.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -13,13 +14,16 @@ export default {
   async execute(interaction) {
     channelLog(generateInteractionCreateLogContent(interaction));
 
-    await ExchangePartner.deleteOne({ id: interaction.user.id });
+    await interaction.deferReply({ ephemeral: true });
+
+    const listing = await ExchangePartner.findOneAndDelete({ id: interaction.user.id });
+    await deleteListingMessage(interaction.client, listing);
 
     const content = `${userMention(
       interaction.user.id,
     )}, your language exchange partner listing was removed from our database.`;
 
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [
         {
           color: COLORS.PRIMARY,
@@ -27,7 +31,6 @@ export default {
           description: content,
         },
       ],
-      ephemeral: true,
     });
   },
 };

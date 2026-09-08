@@ -8,31 +8,31 @@ export default async (interaction) => {
     const userId = interaction.user.id;
     const { channel } = interaction;
 
+    await interaction.deferReply({ ephemeral: true });
+
     const isExist = await Queue.findOne({ id: userId });
 
     if (!isExist) {
-      interaction.reply({
+      await interaction.editReply({
         embeds: [
           {
             color: COLORS.PRIMARY,
             description: 'You are not in the queue.',
           },
         ],
-        ephemeral: true,
       });
       return;
     }
 
     await Queue.deleteOne({ id: userId });
 
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [
         {
           color: COLORS.PRIMARY,
           description: `You have been removed from the queue.\nFeel free to rejoin at any time using </add-me-to-queue:${config.ADD_ME_TO_QUEUE_COMMAND_ID}>.`,
         },
       ],
-      ephemeral: true,
     });
 
     await channel.send({

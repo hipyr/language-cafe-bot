@@ -1,11 +1,10 @@
-import client from '../../client/index.js';
 import TrackerBan from '../../models/tracker-ban.js';
 import TrackerCheckin from '../../models/tracker-checkin.js';
 import TrackerParticipant from '../../models/tracker-participant.js';
 import Tracker from '../../models/tracker.js';
-import channelLog from '../utils/channel-log.js';
+import channelLog, { generateSystemLogContent } from '../utils/channel-log.js';
 import { updateLiveTracker } from '../utils/tracker-renderer.js';
-import { getStartOfDay } from '../utils/tracker-utils.js';
+import { fetchTrackerChannel, getStartOfDay } from '../utils/tracker-utils.js';
 
 /**
  * Daily maintenance for trackers:
@@ -45,7 +44,7 @@ async function processTrackerMaintenance(tracker) {
 
     // Always update live tracker daily (regardless of enforcement settings)
     try {
-      const channel = await client.channels.fetch(tracker.threadId);
+      const channel = await fetchTrackerChannel(tracker);
       if (channel) {
         await updateLiveTracker(tracker.threadId, channel);
       }
@@ -169,12 +168,18 @@ async function banParticipant(tracker, participant) {
     });
 
     channelLog(
-      `User banned from tracker: ${participant.userId} | ${tracker.threadId} | max_misses_exceeded`,
+      generateSystemLogContent('User Banned From Tracker', {
+        tracker: `<#${tracker.threadId}>`,
+        name: tracker.displayName,
+        user: `<@${participant.userId}>`,
+        emoji: participant.emoji,
+        reason: '`max_misses_exceeded`',
+      }),
     );
 
     // Notify in the thread
     try {
-      const channel = await client.channels.fetch(tracker.threadId);
+      const channel = await fetchTrackerChannel(tracker);
       if (channel) {
         await channel.send({
           embeds: [

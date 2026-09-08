@@ -1,9 +1,8 @@
 import Tracker from '../../models/tracker.js';
 import TrackerCheckin from '../../models/tracker-checkin.js';
 import TrackerParticipant from '../../models/tracker-participant.js';
-import client from '../../client/index.js';
-import { generateLiveTrackerEmbed } from '../utils/tracker-renderer.js';
-import channelLog from '../utils/channel-log.js';
+import channelLog, { generateSystemLogContent } from '../utils/channel-log.js';
+import { fetchTrackerChannel } from '../utils/tracker-utils.js';
 
 /**
  * Weekly snapshots for daily trackers:
@@ -32,7 +31,7 @@ export default async function trackerWeeklySnapshots() {
 
 async function createWeeklySnapshot(tracker) {
   try {
-    const channel = await client.channels.fetch(tracker.threadId);
+    const channel = await fetchTrackerChannel(tracker);
     if (!channel) {
       return;
     }
@@ -60,7 +59,13 @@ async function createWeeklySnapshot(tracker) {
     // Post snapshot message
     await channel.send({ embeds: [embed] });
 
-    channelLog(`Weekly snapshot created for tracker: ${tracker.threadId} | ${tracker.displayName}`);
+    channelLog(
+      generateSystemLogContent('Tracker Weekly Snapshot Created', {
+        tracker: `<#${tracker.threadId}>`,
+        name: tracker.displayName,
+        'week ending': `\`${weekEnding}\``,
+      }),
+    );
   } catch (error) {
     console.error(`Error creating weekly snapshot for tracker ${tracker.threadId}:`, error);
   }

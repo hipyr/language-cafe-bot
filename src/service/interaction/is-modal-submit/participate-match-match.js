@@ -8,10 +8,12 @@ const { CLIENT_ID: clientId, MATCH_MATCH_COMMAND_ID: matchMatchCommandId } = con
 
 export default async (interaction) => {
   try {
+    await interaction.deferReply({ ephemeral: true });
+
     const currentMatchMatchTopic = await getCurrentMatchMatchTopic();
 
     if (!currentMatchMatchTopic) {
-      await interaction.reply({
+      await interaction.editReply({
         embeds: [
           {
             color: COLORS.PRIMARY,
@@ -19,7 +21,6 @@ export default async (interaction) => {
               "There's no match-match topic left.\nPlease ping the moderator to create a new topic.",
           },
         ],
-        ephemeral: true,
       });
       return;
     }
@@ -32,7 +33,7 @@ export default async (interaction) => {
     const isCompound = isSubmissionForTopic(submission, currentMatchMatchTopic.topic);
 
     if (!isCompound) {
-      await interaction.reply({
+      await interaction.editReply({
         embeds: [
           {
             color: COLORS.PRIMARY,
@@ -40,7 +41,6 @@ export default async (interaction) => {
               '**Submission has to be a compound word in English.**\n\nSubmission must include the topic word of the day and be a compound word (ex. topic word is water. submissions include: waterfall, saltwater, water bottle, etc)',
           },
         ],
-        ephemeral: true,
       });
       return;
     }
@@ -60,7 +60,7 @@ export default async (interaction) => {
     );
 
     if (res) {
-      await interaction.reply({
+      await interaction.editReply({
         embeds: [
           {
             color: COLORS.PRIMARY,
@@ -69,17 +69,15 @@ export default async (interaction) => {
             } successfully\n\nSubmission in English:\`\`\`\n${submission}\n\`\`\`\nTranslation of Submission in Target Language:\`\`\`\n${submissionInTargetLanguage}\n\`\`\``,
           },
         ],
-        ephemeral: true,
       });
     } else {
-      await interaction.reply({
+      await interaction.editReply({
         embeds: [
           {
             color: COLORS.PRIMARY,
             description: 'Failed to create category',
           },
         ],
-        ephemeral: true,
       });
 
       return;
@@ -138,14 +136,13 @@ export default async (interaction) => {
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error(error);
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [
         {
           color: COLORS.PRIMARY,
           description: 'Failed to create category (Internal Server Error)',
         },
       ],
-      ephemeral: true,
     });
   }
 };

@@ -8,17 +8,18 @@ export default async (interaction) => {
     const userId = interaction.user.id;
     const { channel } = interaction;
 
+    await interaction.deferReply({ ephemeral: true });
+
     const isExist = await Queue.findOne({ id: userId });
 
     if (isExist) {
-      interaction.reply({
+      await interaction.editReply({
         embeds: [
           {
             color: COLORS.PRIMARY,
             description: 'You are already in the queue.',
           },
         ],
-        ephemeral: true,
       });
       return;
     }
@@ -27,14 +28,13 @@ export default async (interaction) => {
 
     const queueLength = await Queue.countDocuments();
 
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [
         {
           color: COLORS.PRIMARY,
           description: `You have been added to the queue.\nCurrent queue position: \`${queueLength}\`\n\nYou're now in the queue. Please wait for your turn. If you wish to remove yourself from the queue, use </remove-me-from-queue:${config.REMOVE_ME_FROM_QUEUE_COMMAND_ID}>`,
         },
       ],
-      ephemeral: true,
     });
 
     await channel.send({

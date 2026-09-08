@@ -7,22 +7,25 @@ export default async (interaction) => {
     const { channel } = interaction;
 
     const oldestQueue = await Queue.findOne().sort({ createdAt: 1 });
+
+    // The empty-queue notice stays private; an actual shift is announced publicly.
+    await interaction.deferReply({ ephemeral: !oldestQueue });
+
     if (!oldestQueue) {
-      await interaction.reply({
+      await interaction.editReply({
         embeds: [
           {
             color: COLORS.PRIMARY,
             description: 'Queue is empty.',
           },
         ],
-        ephemeral: true,
       });
       return;
     }
 
     await Queue.findByIdAndDelete(oldestQueue._id);
 
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [
         {
           color: COLORS.PRIMARY,

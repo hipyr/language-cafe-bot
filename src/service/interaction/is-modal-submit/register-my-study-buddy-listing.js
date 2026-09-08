@@ -1,6 +1,7 @@
 import { userMention } from 'discord.js';
 import config from '../../../config/index.js';
 import { COLORS } from '../../../constants/index.js';
+import deleteListingMessage from '../../utils/delete-listing-message.js';
 import languages from '../../../data/languages.js';
 import StudyBuddy from '../../../models/study-buddy.js';
 
@@ -105,23 +106,27 @@ export default async (interaction) => {
   const refinedTargetLanguage = targetLanguageArray.join(', ');
   const refinedLevel = levelArray.join(', ');
 
-  await StudyBuddy.findOneAndUpdate(
-    { id: interaction.member.user.id },
+  // Validations above are fast; defer before slow DB/API work so the
+  // 3-second interaction window is never exceeded.
+  await interaction.deferReply();
+
+  const previousListing = await StudyBuddy.findOneAndUpdate(
+    { id: interaction.user.id },
     {
       targetLanguage: refinedTargetLanguage,
       level: refinedLevel,
       introduction,
     },
-    { upsert: true, new: true },
+    { upsert: true, new: false },
   );
 
-  await interaction.reply({
+  const listingMessage = await interaction.editReply({
     embeds: [
       {
         color: COLORS.PRIMARY,
         title: 'Register Study Buddy Listing',
         description: `${userMention(
-          interaction.member.user.id,
+          interaction.user.id,
         )} has registered their study buddy listing.`,
         fields: [
           {
@@ -136,12 +141,19 @@ export default async (interaction) => {
           },
         ],
         author: {
-          name: `${interaction.member.user.globalName}(${interaction.member.user.username}#${interaction.member.user.discriminator})`,
-          icon_url: interaction.member.user.avatarURL(),
+          name: `${interaction.user.globalName}(${interaction.user.username}#${interaction.user.discriminator})`,
+          icon_url: interaction.user.avatarURL(),
         },
       },
     ],
   });
+
+  await StudyBuddy.updateOne(
+    { id: interaction.user.id },
+    { listingChannelId: listingMessage.channelId, listingMessageId: listingMessage.id },
+  ).catch(console.error);
+
+  await deleteListingMessage(interaction.client, previousListing);
 
   await interaction.followUp({
     embeds: [

@@ -12,10 +12,21 @@ import createANewMatchMatchTopic from '../service/interaction/is-modal-submit/cr
 import participateMatchMatch from '../service/interaction/is-modal-submit/participate-match-match.js';
 import trackerJoinEmojiAutocomplete from '../service/interaction/is-autocomplete/tracker-join-emoji-autocomplete.js';
 import dmServerTutorial from '../service/interaction/is-button/dm-server-tutorial.js';
+import {
+  handleEventRemoveConfirm,
+  handleEventRemoveCancel,
+} from '../service/interaction/is-chat-input-command/event-remove.js';
+import { handleLiveEventCreateModalSubmit } from '../service/interaction/is-chat-input-command/live-event-create.js';
+import { handleLiveEventEditModalSubmit } from '../service/interaction/is-chat-input-command/live-event-edit.js';
+import {
+  handleLiveEventRemoveConfirm,
+  handleLiveEventRemoveCancel,
+} from '../service/interaction/is-chat-input-command/live-event-remove.js';
 
 export default {
   name: Events.InteractionCreate,
   async execute(interaction) {
+    // ── Autocomplete ──────────────────────────────────────────────────────────
     if (interaction.isAutocomplete()) {
       channelLog(
         generateInteractionCreateLogContent(
@@ -28,6 +39,18 @@ export default {
         trackerJoinEmojiAutocomplete(interaction);
         return;
       }
+      if (interaction.commandName === 'event') {
+        const { handleEventNameAutocomplete } =
+          await import('../service/interaction/is-autocomplete/event-name-autocomplete.js');
+        handleEventNameAutocomplete(interaction);
+        return;
+      }
+      if (interaction.commandName === 'live-event') {
+        const { handleLiveEventNameAutocomplete } =
+          await import('../service/interaction/is-autocomplete/live-event-name-autocomplete.js');
+        handleLiveEventNameAutocomplete(interaction);
+        return;
+      }
     }
 
     if (interaction.isChatInputCommand()) {
@@ -35,6 +58,7 @@ export default {
       if (cooldownRes?.shouldReturn) return;
     }
 
+    // ── Modal submits ─────────────────────────────────────────────────────────
     if (interaction.isModalSubmit()) {
       channelLog(
         generateInteractionCreateLogContent(
@@ -43,37 +67,41 @@ export default {
         ),
       );
 
+      if (interaction.customId.startsWith('live-event-create-modal\x00')) {
+        handleLiveEventCreateModalSubmit(interaction);
+        return;
+      }
+      if (interaction.customId.startsWith('live-event-edit-modal\x00')) {
+        handleLiveEventEditModalSubmit(interaction);
+        return;
+      }
       if (interaction.customId === 'generate-poll') {
         GeneratePollModalSubmit(interaction);
         return;
       }
-
       if (interaction.customId === 'register-my-exchange-listing') {
         RegisterExchangePartnerListModalSubmit(interaction);
         return;
       }
-
       if (interaction.customId === 'register-my-study-buddy-listing') {
         registerMyStudyBuddyListing(interaction);
         return;
       }
-
       if (interaction.customId === 'create-new-category') {
         createNewCategory(interaction);
         return;
       }
-
       if (interaction.customId === 'create-a-new-match-match-topic') {
         createANewMatchMatchTopic(interaction);
         return;
       }
-
       if (interaction.customId === 'participate-match-match') {
         participateMatchMatch(interaction);
         return;
       }
     }
 
+    // ── Buttons ───────────────────────────────────────────────────────────────
     if (interaction.isButton()) {
       channelLog(
         generateInteractionCreateLogContent(
@@ -86,21 +114,33 @@ export default {
         getExchangeListing(interaction);
         return;
       }
-
       if (interaction.customId.startsWith('get-study-buddy')) {
         getStudyBuddyListing(interaction);
         return;
       }
-
       if (interaction.customId.startsWith('join-pomodoro-group')) {
         joinPomodoroGroup(interaction);
         return;
       }
-
       if (interaction.customId.startsWith('dm-server-tutorial')) {
         dmServerTutorial(interaction);
         // eslint-disable-next-line no-useless-return
         return;
+      }
+      if (interaction.customId.startsWith('event-remove-confirm:')) {
+        handleEventRemoveConfirm(interaction);
+        return;
+      }
+      if (interaction.customId.startsWith('event-remove-cancel:')) {
+        handleEventRemoveCancel(interaction);
+        return;
+      }
+      if (interaction.customId.startsWith('live-event-remove-confirm:')) {
+        handleLiveEventRemoveConfirm(interaction);
+        return;
+      }
+      if (interaction.customId.startsWith('live-event-remove-cancel:')) {
+        handleLiveEventRemoveCancel(interaction);
       }
     }
   },

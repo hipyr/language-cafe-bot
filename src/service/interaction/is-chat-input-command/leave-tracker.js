@@ -4,7 +4,7 @@ import TrackerParticipant from '../../../models/tracker-participant.js';
 import TrackerCheckin from '../../../models/tracker-checkin.js';
 import { isForumThread } from '../../utils/tracker-utils.js';
 import { updateLiveTracker } from '../../utils/tracker-renderer.js';
-import channelLog from '../../utils/channel-log.js';
+import channelLog, { generateSystemLogContent } from '../../utils/channel-log.js';
 
 export default async function leaveTracker(interaction) {
   await interaction.deferReply();
@@ -74,7 +74,13 @@ export default async function leaveTracker(interaction) {
       ],
     });
 
-    channelLog(`User left tracker: ${userId} | ${threadId} | ${participant.emoji}`);
+    channelLog(
+      generateSystemLogContent('User Left Tracker', {
+        tracker: `<#${threadId}>`,
+        user: `<@${userId}>`,
+        emoji: participant.emoji,
+      }),
+    );
 
     // Update live tracker
     await updateLiveTracker(threadId, interaction.channel);

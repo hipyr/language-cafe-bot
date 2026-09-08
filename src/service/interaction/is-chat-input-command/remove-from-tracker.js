@@ -4,7 +4,7 @@ import TrackerParticipant from '../../../models/tracker-participant.js';
 import TrackerCheckin from '../../../models/tracker-checkin.js';
 import { isForumThread } from '../../utils/tracker-utils.js';
 import { updateLiveTracker } from '../../utils/tracker-renderer.js';
-import channelLog from '../../utils/channel-log.js';
+import channelLog, { generateSystemLogContent } from '../../utils/channel-log.js';
 
 export default async function removeFromTracker(interaction) {
   await interaction.deferReply();
@@ -78,7 +78,12 @@ export default async function removeFromTracker(interaction) {
     });
 
     channelLog(
-      `User removed from tracker: ${targetUser.id} | ${threadId} | ${participant.emoji} | by ${interaction.user.id}`,
+      generateSystemLogContent('User Removed From Tracker', {
+        tracker: `<#${threadId}>`,
+        user: `<@${targetUser.id}>`,
+        emoji: participant.emoji,
+        'removed by': `<@${interaction.user.id}>`,
+      }),
     );
 
     // Update live tracker

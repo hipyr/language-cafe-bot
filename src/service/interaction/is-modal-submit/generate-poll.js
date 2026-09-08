@@ -78,15 +78,18 @@ export default async (interaction) => {
     description: content,
   };
 
+  // Validations above are fast; defer before sending messages so the
+  // 3-second interaction window is never exceeded.
+  await interaction.deferReply({ ephemeral: true });
+
   const message = await interaction.channel.send({
     embeds: [embed],
   });
 
   pollEmojiArray.slice(0, numberOfPolls).forEach((emoji) => message.react(emoji).catch(() => {}));
 
-  await interaction.reply({
+  await interaction.editReply({
     content: 'Poll has been generated.\n\n**This message will be deleted in 10 seconds.**',
-    ephemeral: true,
   });
 
   setTimeout(async () => {

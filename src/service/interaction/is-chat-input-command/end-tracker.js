@@ -4,7 +4,7 @@ import TrackerParticipant from '../../../models/tracker-participant.js';
 import TrackerCheckin from '../../../models/tracker-checkin.js';
 import TrackerBan from '../../../models/tracker-ban.js';
 import { isForumThread } from '../../utils/tracker-utils.js';
-import channelLog from '../../utils/channel-log.js';
+import channelLog, { generateSystemLogContent } from '../../utils/channel-log.js';
 
 export default async function endTracker(interaction) {
   await interaction.deferReply();
@@ -76,7 +76,13 @@ export default async function endTracker(interaction) {
       ],
     });
 
-    channelLog(`Tracker deleted: ${threadId} | ${tracker.displayName} | by ${interaction.user.id}`);
+    channelLog(
+      generateSystemLogContent('Tracker Deleted', {
+        tracker: `<#${threadId}>`,
+        name: tracker.displayName,
+        'deleted by': `<@${interaction.user.id}>`,
+      }),
+    );
   } catch (error) {
     console.error('Error ending tracker:', error);
     await interaction.editReply({

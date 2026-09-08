@@ -22,6 +22,8 @@ export default {
   async execute(interaction) {
     channelLog(generateInteractionCreateLogContent(interaction));
 
+    await interaction.deferReply({ ephemeral: true });
+
     const clientData = await StudyBuddy.findOne(
       {
         id: interaction.user.id,
@@ -30,7 +32,7 @@ export default {
     );
 
     if (!clientData) {
-      await interaction.reply({
+      await interaction.editReply({
         embeds: [
           {
             color: COLORS.PRIMARY,
@@ -40,7 +42,6 @@ export default {
             )}, you have not registered your study buddy listing yet.`,
           },
         ],
-        ephemeral: true,
       });
       return;
     }
@@ -78,7 +79,7 @@ export default {
     const studyBuddyListLength = filteredStudyBuddies.length;
 
     if (studyBuddyListLength === 0) {
-      await interaction.reply({
+      await interaction.editReply({
         embeds: [
           {
             color: COLORS.PRIMARY,
@@ -86,7 +87,6 @@ export default {
             description: `${userMention(interaction.user.id)}, there are no study buddy matches.`,
           },
         ],
-        ephemeral: true,
       });
 
       return;
@@ -99,7 +99,7 @@ export default {
     const targetLanguageArray = studyBuddy.targetLanguage.split(', ');
     const levelArray = studyBuddy.level.split(', ');
 
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [
         {
           color: COLORS.PRIMARY,
@@ -151,7 +151,6 @@ export default {
             .setDisabled(studyBuddyListLength === 1),
         ),
       ],
-      ephemeral: true,
     });
   },
 };

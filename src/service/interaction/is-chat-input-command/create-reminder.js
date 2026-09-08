@@ -1,7 +1,8 @@
+import { time } from 'discord.js';
 import client from '../../../client/index.js';
 import { COLORS } from '../../../constants/index.js';
 import Reminder from '../../../models/reminder.js';
-import channelLog from '../../utils/channel-log.js';
+import channelLog, { generateSystemLogContent } from '../../utils/channel-log.js';
 
 const REMINDER_EMOJI = '🔔';
 
@@ -155,7 +156,13 @@ export default async function createReminder(interaction) {
       });
 
       channelLog(
-        `Reminder created: ${messageId} | End: ${endDate.toISOString()} | Reminder: ${reminderAt.toISOString()}`,
+        generateSystemLogContent('Reminder Created', {
+          channel: `<#${channelId}>`,
+          message: messageLink,
+          'created by': `<@${interaction.user.id}>`,
+          'ends at': time(Math.floor(endDate.getTime() / 1000), 'F'),
+          'reminds at': time(Math.floor(reminderAt.getTime() / 1000), 'F'),
+        }),
       );
     } catch (error) {
       console.error('Error accessing message:', error);
